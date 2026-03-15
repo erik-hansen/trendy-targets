@@ -42,84 +42,124 @@
       <!-- Spacer to account for fixed header -->
       <div style="height: 100px;"></div>
       
-      <!-- Collapse/Expand All Buttons -->
-      <div class="mb-3 text-center">
-        <button class="btn btn-sm btn-outline-primary me-2" @click="expandAll">
-          <i class="bi bi-chevron-down"></i> Expand All
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" @click="collapseAll">
-          <i class="bi bi-chevron-up"></i> Collapse All
-        </button>
+      <!-- Filters and Controls -->
+      <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-2">
+          <input 
+            type="text" 
+            class="form-control form-control-sm" 
+            placeholder="Filter categories..."
+            v-model="filterText"
+          />
+          <select class="form-select form-select-sm" v-model="filterCadence" style="width: auto;">
+            <option value="">All Cadences</option>
+            <option v-for="cadence in uniqueCadences" :key="cadence" :value="cadence">{{ cadence }}</option>
+          </select>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-outline-primary me-2" @click="expandAll">
+            <i class="bi bi-chevron-down"></i> Expand All
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" @click="collapseAll">
+            <i class="bi bi-chevron-up"></i> Collapse All
+          </button>
+        </div>
       </div>
       
-      <!-- Group Percentage Background -->
-      <div v-for="group in categoryGroups" :key="group.id" class="category-group mb-2 position-relative">
-        <h6 class="category-group-header p-2 position-relative" @click="toggleGroup(group.id)" style="cursor: pointer;">
-          <strong>{{ group.name }}</strong>
-          <span class="float-end">
-            <i :class="isGroupCollapsed(group.id) ? 'bi bi-chevron-right' : 'bi bi-chevron-down'" class="me-2"></i>
-            <span class="badge bg-light text-dark border group-badge">Target: ${{ formatAmount(group.targetTotal) }}</span>
-            <span class="badge group-badge" :class="getGroupDifferenceClass(group)">{{ getGroupDifference(group) }}</span>
-            <span class="badge bg-primary text-white group-badge">What-If: ${{ formatAmount(group.whatIfTotal) }}
-              <div class="percentage-container d-inline-block">
-                <div class="pie-chart" :style="getPieChartStyle(group.whatIfTotal, grandWhatIfTotal)"></div>
-                <span class="percentage-value">{{ getGroupPercentage(group) }}%</span>
-              </div>
-            </span>
-          </span>
-        </h6>
-        
-        <div class="collapse" :class="{ show: !isGroupCollapsed(group.id) }">
-          <div class="card card-body">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Target Cadence</th>
-                  <th class="text-end">Monthly Target</th>
-                  <th class="text-end">Difference</th>
-                  <th class="text-end">What-If Monthly</th>
-                  <th class="text-end">% of Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="category in group.categories" :key="category.id">
-                  <td>{{ category.name }}</td>
-                  <td>
-                    <span 
-                      :class="'cadence-pill ' + getCadenceClass(category)"
-                      :style="getCadenceStyle(category)"
-                    >
-                      {{ getCadenceLabel(category) }}
-                    </span>
-                  </td>
-                  <td class="text-end">${{ formatAmount(category.monthlyTarget) }}</td>
-                  <td class="text-end">
-                    <span :class="getCategoryDifferenceClass(category)">
-                      {{ getCategoryDifference(category) }}
-                    </span>
-                  </td>
-                  <td class="text-end">
-                    <input 
-                      type="number" 
-                      class="form-control form-control-sm what-if-input"
-                      :value="category.whatIfMonthly"
-                      @input="updateWhatIf(category.id, $event)"
-                      step="0.01"
-                      min="0"
-                    />
-                  </td>
-                  <td class="text-end">
-                    <div class="percentage-container">
-                      <div class="pie-chart" :style="getPieChartStyle(category.whatIfMonthly, grandWhatIfTotal)"></div>
-                      <span class="percentage-value">{{ getCategoryPercentage(category) }}%</span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <!-- Single Table with All Categories -->
+      <div class="table-responsive">
+        <table class="table table-sm table-hover">
+          <thead class="table-purple">
+            <tr>
+              <th style="width: 30px;"></th>
+              <th @click="sortBy('group')" style="cursor: pointer;">
+                Group <i :class="getSortIcon('group')"></i>
+              </th>
+              <th @click="sortBy('name')" style="cursor: pointer;">
+                Category <i :class="getSortIcon('name')"></i>
+              </th>
+              <th @click="sortBy('cadence')" style="cursor: pointer;">
+                Cadence <i :class="getSortIcon('cadence')"></i>
+              </th>
+              <th @click="sortBy('monthlyTarget')" class="text-end" style="cursor: pointer;">
+                Target <i :class="getSortIcon('monthlyTarget')"></i>
+              </th>
+              <th class="text-end">Difference</th>
+              <th @click="sortBy('whatIfMonthly')" class="text-end" style="cursor: pointer;">
+                What-If <i :class="getSortIcon('whatIfMonthly')"></i>
+              </th>
+              <th @click="sortBy('percentage')" class="text-end" style="cursor: pointer;">
+                % <i :class="getSortIcon('percentage')"></i>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="group in sortedAndFilteredGroups" :key="group.id">
+              <!-- Group Roll-up Row -->
+              <tr 
+                class="table-purple-light group-row" 
+                @click="toggleGroup(group.id)"
+                style="cursor: pointer; font-weight: bold;"
+              >
+                <td>
+                  <i :class="isGroupCollapsed(group.id) ? 'bi bi-chevron-right' : 'bi bi-chevron-down'"></i>
+                </td>
+                <td colspan="2">{{ group.name }}</td>
+                <td></td>
+                <td class="text-end">${{ formatAmount(group.targetTotal) }}</td>
+                <td class="text-end" :class="getGroupDifferenceClass(group)">{{ getGroupDifference(group) }}</td>
+                <td class="text-end">${{ formatAmount(group.whatIfTotal) }}</td>
+                <td class="text-end">
+                  <div class="bar-container">
+                    <div class="bar-bg"></div>
+                    <div class="bar-purple" :style="getBarWidthStyle(group.whatIfTotal, grandWhatIfTotal)"></div>
+                    <span class="bar-text">{{ getGroupPercentage(group) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              <!-- Category Rows -->
+              <tr 
+                v-for="category in group.categories" 
+                :key="category.id"
+                v-show="!isGroupCollapsed(group.id) && matchesFilter(category, group)"
+                class="category-row"
+              >
+                <td></td>
+                <td></td>
+                <td>{{ category.name }}</td>
+                <td>
+                  <span 
+                    :class="'cadence-pill ' + getCadenceClass(category)"
+                    :style="getCadenceStyle(category)"
+                  >
+                    {{ getCadenceLabel(category) }}
+                  </span>
+                </td>
+                <td class="text-end">${{ formatAmount(category.monthlyTarget) }}</td>
+                <td class="text-end">
+                  <span :class="getCategoryDifferenceClass(category)">{{ getCategoryDifference(category) }}</span>
+                </td>
+                <td class="text-end">
+                  <input 
+                    type="number" 
+                    class="form-control form-control-sm what-if-input"
+                    :value="category.whatIfMonthly"
+                    @input="updateWhatIf(category.id, $event)"
+                    step="0.01"
+                    min="0"
+                  />
+                </td>
+                <td class="text-end">
+                  <div class="bar-container">
+                    <div class="bar-bg"></div>
+                    <div class="bar-purple" :style="getBarWidthStyle(category.whatIfMonthly, grandWhatIfTotal)"></div>
+                    <span class="bar-text">{{ getCategoryPercentage(category) }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -139,7 +179,11 @@ export default {
       error: null,
       categoryGroups: [],
       whatIfValues: {},
-      collapsedGroups: []
+      collapsedGroups: [],
+      sortColumn: 'group',
+      sortDirection: 'asc',
+      filterText: '',
+      filterCadence: ''
     };
   },
   
@@ -176,6 +220,84 @@ export default {
         return baseStyle + ' background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); color: white;';
       }
       return baseStyle + ' background: #f8f9fa; color: #6c757d; border: 2px solid #dee2e6;';
+    },
+    
+    uniqueCadences() {
+      const cadences = new Set();
+      this.categoryGroups.forEach(group => {
+        group.categories.forEach(cat => {
+          cadences.add(this.getCadenceLabel(cat));
+        });
+      });
+      return Array.from(cadences).sort();
+    },
+    
+    sortedAndFilteredGroups() {
+      let groups = [...this.categoryGroups];
+      
+      // Filter groups based on category matches
+      if (this.filterText || this.filterCadence) {
+        groups = groups.map(group => ({
+          ...group,
+          categories: group.categories.filter(cat => this.matchesFilter(cat, group))
+        })).filter(group => group.categories.length > 0 || this.matchesFilter(null, group));
+      }
+      
+      // Sort groups
+      groups.sort((a, b) => {
+        let comparison = 0;
+        switch (this.sortColumn) {
+          case 'group':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'monthlyTarget':
+            comparison = a.targetTotal - b.targetTotal;
+            break;
+          case 'whatIfMonthly':
+            comparison = a.whatIfTotal - b.whatIfTotal;
+            break;
+          case 'percentage':
+            const pctA = this.grandWhatIfTotal ? (a.whatIfTotal / this.grandWhatIfTotal) : 0;
+            const pctB = this.grandWhatIfTotal ? (b.whatIfTotal / this.grandWhatIfTotal) : 0;
+            comparison = pctA - pctB;
+            break;
+          default:
+            comparison = a.name.localeCompare(b.name);
+        }
+        return this.sortDirection === 'asc' ? comparison : -comparison;
+      });
+      
+      // Sort categories within each group
+      groups = groups.map(group => ({
+        ...group,
+        categories: [...group.categories].sort((a, b) => {
+          let comparison = 0;
+          switch (this.sortColumn) {
+            case 'name':
+              comparison = a.name.localeCompare(b.name);
+              break;
+            case 'cadence':
+              comparison = this.getCadenceLabel(a).localeCompare(this.getCadenceLabel(b));
+              break;
+            case 'monthlyTarget':
+              comparison = a.monthlyTarget - b.monthlyTarget;
+              break;
+            case 'whatIfMonthly':
+              comparison = a.whatIfMonthly - b.whatIfMonthly;
+              break;
+            case 'percentage':
+              const pctA = this.grandWhatIfTotal ? (a.whatIfMonthly / this.grandWhatIfTotal) : 0;
+              const pctB = this.grandWhatIfTotal ? (b.whatIfMonthly / this.grandWhatIfTotal) : 0;
+              comparison = pctA - pctB;
+              break;
+            default:
+              comparison = a.name.localeCompare(b.name);
+          }
+          return this.sortDirection === 'asc' ? comparison : -comparison;
+        })
+      }));
+      
+      return groups;
     }
   },
   
@@ -366,20 +488,20 @@ export default {
       const frequency = category.goal_cadence_frequency || 1;
       
       if (cadence === null || cadence === undefined) {
-        return 'background: #6c757d; color: white;';
+        return 'background: #6c757d; color: white; border-radius: 50px; padding: 4px 10px;';
       }
       
       switch (cadence) {
-        case 0: return 'background: #6c757d; color: white;';
-        case 1: return frequency === 1 ? 'background: #007bff; color: white;' : 'background: #004085; color: white;';
-        case 2: return frequency === 1 ? 'background: #28a745; color: white;' : 'background: #1e7e34; color: white;';
-        case 3: case 6: case 9: case 12: return 'background: #6f42c1; color: white;'; // Every N months
-        case 4: return 'background: #17a2b8; color: white;'; // Quarterly
-        case 5: case 7: case 10: case 11: return 'background: #6f42c1; color: white;'; // Every N months
-        case 8: return 'background: #6f42c1; color: white;'; // Every 7 months
-        case 13: return frequency === 1 ? 'background: #dc3545; color: white;' : 'background: #721c24; color: white;';
-        case 14: return 'background: #343a40; color: white;';
-        default: return 'background: #6c757d; color: white;';
+        case 0: return 'background: #6c757d; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 1: return frequency === 1 ? 'background: #007bff; color: white; border-radius: 50px; padding: 4px 10px;' : 'background: #004085; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 2: return frequency === 1 ? 'background: #28a745; color: white; border-radius: 50px; padding: 4px 10px;' : 'background: #1e7e34; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 3: case 6: case 9: case 12: return 'background: #6f42c1; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 4: return 'background: #17a2b8; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 5: case 7: case 10: case 11: return 'background: #6f42c1; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 8: return 'background: #6f42c1; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 13: return frequency === 1 ? 'background: #dc3545; color: white; border-radius: 50px; padding: 4px 10px;' : 'background: #721c24; color: white; border-radius: 50px; padding: 4px 10px;';
+        case 14: return 'background: #343a40; color: white; border-radius: 50px; padding: 4px 10px;';
+        default: return 'background: #6c757d; color: white; border-radius: 50px; padding: 4px 10px;';
       }
     },
     
@@ -417,7 +539,8 @@ export default {
     },
     
     updateWhatIf(categoryId, event) {
-      const value = parseFloat(event.target.value) || 0;
+      const rawValue = parseFloat(event.target.value) || 0;
+      const value = Math.round(rawValue * 100) / 100; // Clip to 2 decimal places
       this.whatIfValues[categoryId] = value;
       
       // Update the category's whatIfMonthly value
@@ -463,11 +586,35 @@ export default {
       return ((group.whatIfTotal / this.grandWhatIfTotal) * 100).toFixed(1);
     },
     
-    getPieChartStyle(value, total) {
-      if (total === 0) return '--pie-fill: 0deg;';
+    getBarWidthStyle(value, total) {
+      if (total === 0) return 'width: 0%;';
       const percentage = Math.min((value / total) * 100, 100);
-      const degrees = (percentage / 100) * 360;
-      return `--pie-fill: ${degrees}deg;`;
+      return `width: ${percentage}%;`;
+    },
+    
+    sortBy(column) {
+      if (this.sortColumn === column) {
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortColumn = column;
+        this.sortDirection = 'asc';
+      }
+    },
+    
+    getSortIcon(column) {
+      if (this.sortColumn !== column) return 'bi bi-sort';
+      return this.sortDirection === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
+    },
+    
+    matchesFilter(category, group) {
+      const textMatch = !this.filterText || 
+        (category && category.name.toLowerCase().includes(this.filterText.toLowerCase())) ||
+        (group && group.name.toLowerCase().includes(this.filterText.toLowerCase()));
+      
+      const cadenceMatch = !this.filterCadence || 
+        (category && this.getCadenceLabel(category) === this.filterCadence);
+      
+      return textMatch && cadenceMatch;
     },
   }
 };
@@ -567,6 +714,133 @@ export default {
   margin-right: 0;
 }
 
+/* Purple Table Theme */
+.table-purple {
+  background: #6f42c1 !important;
+  color: white !important;
+}
+
+.table-purple th {
+  background: #5a2d96 !important;
+  color: white !important;
+  border-color: #4a1d86 !important;
+}
+
+.table-purple-light {
+  background-color: #e9e1f8 !important;
+}
+
+.table-purple-light:hover {
+  background-color: #dccff0 !important;
+}
+
+.group-row {
+  background-color: #e9ecef !important;
+  font-weight: bold;
+}
+
+.group-row:hover {
+  background-color: #dee2e6 !important;
+}
+
+.category-row {
+  background-color: #fff;
+}
+
+.category-row:hover {
+  background-color: #f8f9fa;
+}
+
+.category-row td:first-child,
+.category-row td:nth-child(2) {
+  border-left: 3px solid #6f42c1;
+  padding-left: 10px;
+}
+
+.table-responsive {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table td {
+  position: relative;
+  vertical-align: middle;
+}
+
+/* Bar graph in cells */
+.bar-container {
+  position: relative;
+  width: 80px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0;
+  padding: 0;
+}
+
+.bar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #e9ecef;
+  border-radius: 4px;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+}
+
+.bar-purple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #6f42c1;
+  border-radius: 4px;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  opacity: 0.6;
+  transition: width 0.3s ease;
+  -webkit-transition: width 0.3s ease;
+  -moz-transition: width 0.3s ease;
+}
+
+.bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333;
+  z-index: 10;
+}
+
+/* Cell bar graph backgrounds */
+.cell-bar-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #e9ecef;
+  z-index: 1;
+}
+
+.cell-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(108, 66, 193, 0.4), rgba(108, 66, 193, 0.15));
+  transition: width 0.3s ease;
+}
+
+.position-relative {
+  position: relative;
+  z-index: 2;
+}
+
 .group-header {
   display: flex;
   align-items: center;
@@ -611,13 +885,14 @@ export default {
 }
 
 /* Cadence Pills */
-td .cadence-pill {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 16px !important;
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
+.cadence-pill {
+  display: inline-block !important;
+  padding: 4px 10px !important;
+  border-radius: 50px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  border: none !important;
 }
 
 /* Percentage with Pie Chart */
@@ -648,7 +923,7 @@ td .cadence-pill {
 .cadence-custom-weeks { background: #1e7e34; color: white; }
 .cadence-quarterly { background: #17a2b8; color: white; }
 .cadence-every-n { background: #6f42c1; color: white; }
-.cadence-yearly { background: #dc3545; color: white; }
+.cadence-yearly { background: #dc8e35f8; color: white; }
 .cadence-custom-years { background: #721c24; color: white; }
 .cadence-two-years { background: #343a40; color: white; }
 .cadence-unknown { background: #6c757d; color: white; }
