@@ -42,10 +42,38 @@
         <!-- Otherwise if we have a token, show the budget select -->
         <Budgets v-else-if="!budgetId" :budgets="budgets" :selectBudget="selectBudget" />
 
-        <!-- If a budget has been selected, display transactions from that budget -->
+        <!-- If a budget has been selected, show navigation and selected view -->
         <div v-else>
-          <Transactions :transactions="transactions" />
-          <button class="btn btn-info" @click="budgetId = null">&lt; Select Another Budget</button>
+          <!-- View Toggle Buttons -->
+          <div class="btn-group mb-3" role="group">
+            <button 
+              class="btn" 
+              :class="currentView === 'transactions' ? 'btn-primary' : 'btn-outline-primary'"
+              @click="currentView = 'transactions'"
+            >
+              Transactions
+            </button>
+            <button 
+              class="btn" 
+              :class="currentView === 'targets' ? 'btn-primary' : 'btn-outline-primary'"
+              @click="currentView = 'targets'"
+            >
+              Targets
+            </button>
+          </div>
+          
+          <!-- Transactions View -->
+          <Transactions v-if="currentView === 'transactions'" :transactions="transactions" />
+          
+          <!-- Targets View -->
+          <Targets 
+            v-else-if="currentView === 'targets'" 
+            :api="api" 
+            :budgetId="budgetId"
+            @error="error = $event"
+          />
+          
+          <button class="btn btn-info mt-3" @click="budgetId = null">&lt; Select Another Budget</button>
         </div>
 
       </div>
@@ -67,6 +95,7 @@ import Nav from './components/Nav.vue';
 import Footer from './components/Footer.vue';
 import Budgets from './components/Budgets.vue';
 import Transactions from './components/Transactions.vue';
+import Targets from './components/Targets.vue';
 
 export default {
   // The data to feed our templates
@@ -83,6 +112,7 @@ export default {
       budgetId: null,
       budgets: [],
       transactions: [],
+      currentView: 'targets', // 'transactions' or 'targets'
     }
   },
   // When this component is created, check whether we need to get a token,
@@ -163,7 +193,8 @@ export default {
     Nav,
     Footer,
     Budgets,
-    Transactions
+    Transactions,
+    Targets
   }
 }
 </script>

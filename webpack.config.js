@@ -22,6 +22,10 @@ export default {
         test: /\.vue$/,
         use: ["vue-loader"],
       },
+      {
+        test: /\.css$/,
+        use: ["css-loader"],
+      },
     ],
   },
   plugins: [
