@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <Nav />
+    <Nav 
+      :showMenu="budgetId !== null" 
+      :currentView="currentView"
+      @view-change="currentView = $event"
+    />
     <div class="container">
 
       <!-- Display a loading message if loading -->
@@ -44,30 +48,20 @@
 
         <!-- If a budget has been selected, show navigation and selected view -->
         <div v-else>
-          <!-- View Toggle Buttons -->
-          <div class="btn-group mb-3" role="group">
-            <button 
-              class="btn" 
-              :class="currentView === 'transactions' ? 'btn-primary' : 'btn-outline-primary'"
-              @click="currentView = 'transactions'"
-            >
-              Transactions
-            </button>
-            <button 
-              class="btn" 
-              :class="currentView === 'targets' ? 'btn-primary' : 'btn-outline-primary'"
-              @click="currentView = 'targets'"
-            >
-              Targets
-            </button>
-          </div>
-          
           <!-- Transactions View -->
           <Transactions v-if="currentView === 'transactions'" :transactions="transactions" />
           
           <!-- Targets View -->
           <Targets 
             v-else-if="currentView === 'targets'" 
+            :api="api" 
+            :budgetId="budgetId"
+            @error="error = $event"
+          />
+          
+          <!-- Projections View -->
+          <Projections 
+            v-else-if="currentView === 'projections'" 
             :api="api" 
             :budgetId="budgetId"
             @error="error = $event"
@@ -96,6 +90,7 @@ import Footer from './components/Footer.vue';
 import Budgets from './components/Budgets.vue';
 import Transactions from './components/Transactions.vue';
 import Targets from './components/Targets.vue';
+import Projections from './components/Projections.vue';
 
 export default {
   // The data to feed our templates
@@ -194,7 +189,8 @@ export default {
     Footer,
     Budgets,
     Transactions,
-    Targets
+    Targets,
+    Projections
   }
 }
 </script>

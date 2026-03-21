@@ -16,7 +16,7 @@
       <!-- Sticky Totals Header -->
       <div 
         class="sticky-totals" 
-        style="position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 15px 30px; border-bottom: 2px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 1140px;"
+        style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 999; background: white; padding: 15px 30px; border-bottom: 2px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 1140px;"
       >
         <div style="display: flex; gap: 20px; justify-content: center;">
           <div style="flex: 1; max-width: 250px; padding: 15px 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -40,7 +40,7 @@
       </div>
       
       <!-- Spacer to account for fixed header -->
-      <div style="height: 100px;"></div>
+      <div style="height: 180px;"></div>
       
       <!-- Filters and Controls -->
       <div class="mb-3 d-flex justify-content-between align-items-center">
