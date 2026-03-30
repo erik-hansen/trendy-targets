@@ -630,6 +630,39 @@ export default {
       return endDate;
     },
     
+    getTooltipTransactions(accountId, targetDate, isHistorical) {
+      const transactions = [];
+      
+      if (isHistorical) {
+        // For historical data, we don't have transaction details loaded
+        transactions.push('');
+        transactions.push('Historical data point');
+      } else {
+        // For future data, get scheduled transactions for this date
+        const dayTransactions = this.scheduledTransactionList.filter(t => {
+          if (t.accountId !== accountId) return false;
+          return t.date.toDateString() === targetDate.toDateString();
+        });
+        
+        if (dayTransactions.length > 0) {
+          transactions.push('');
+          transactions.push('Scheduled transactions:');
+          dayTransactions.slice(0, 5).forEach(t => {
+            const sign = t.amount > 0 ? '+' : '';
+            transactions.push(`  ${t.payee}: ${sign}$${this.formatAmount(Math.abs(t.amount))}`);
+          });
+          if (dayTransactions.length > 5) {
+            transactions.push(`  ... and ${dayTransactions.length - 5} more`);
+          }
+        } else {
+          transactions.push('');
+          transactions.push('No scheduled transactions');
+        }
+      }
+      
+      return transactions;
+    },
+    
     formatFrequency(frequency) {
       const frequencyMap = {
         'never': 'One-time',
@@ -716,7 +749,8 @@ export default {
             backgroundColor: account.color + '20',
             borderWidth: 2,
             fill: false,
-            tension: 0.1
+            tension: 0.1,
+            accountId: account.id
           };
         });
         
@@ -739,12 +773,41 @@ export default {
                 position: 'top'
               },
               tooltip: {
-                mode: 'index',
-                intersect: false,
+                mode: 'nearest',
+                intersect: true,
                 callbacks: {
+                  title: function(context) {
+                    return context[0].label;
+                  },
                   label: function(context) {
-                    return context.dataset.label + ': $' + formatAmount(context.parsed.y);
-                  }
+                    const accountName = context.dataset.label;
+                    const balance = context.parsed.y;
+                    return accountName + ': $' + formatAmount(balance);
+                  },
+                  footer: function(tooltipItems) {
+                    const context = tooltipItems[0];
+                    const dataIndex = context.dataIndex;
+                    const accountId = context.dataset.accountId;
+                    
+                    // Calculate the actual date from the data index
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    let targetDate;
+                    if (dataIndex <= 30) {
+                      // Historical date
+                      targetDate = new Date(today);
+                      targetDate.setDate(targetDate.getDate() - (30 - dataIndex));
+                    } else {
+                      // Future date
+                      targetDate = new Date(today);
+                      targetDate.setDate(targetDate.getDate() + (dataIndex - 30));
+                    }
+                    
+                    // Get transactions for this account and date
+                    const transactions = this.getTooltipTransactions(accountId, targetDate, dataIndex <= 30);
+                    return transactions;
+                  }.bind(this)
                 }
               },
               verticalLine: {
